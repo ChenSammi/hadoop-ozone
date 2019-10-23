@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -94,11 +95,14 @@ public class TestBlockManager {
 
 
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, folder.newFolder().toString());
+    conf.setBoolean(HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION, false);
+    conf.setTimeDuration(HddsConfigKeys.HDDS_PIPELINE_REPORT_INTERVAL, 1,
+        TimeUnit.SECONDS);
 
     // Override the default Node Manager in SCM with this Mock Node Manager.
     nodeManager = new MockNodeManager(true, 10);
     pipelineManager =
-        new SCMPipelineManager(conf, nodeManager, new EventQueue(), null);
+        new SCMPipelineManager(conf, nodeManager, new EventQueue());
     PipelineProvider mockRatisProvider =
         new MockRatisPipelineProvider(nodeManager,
             pipelineManager.getStateManager(), conf);
@@ -136,6 +140,8 @@ public class TestBlockManager {
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
+    pipelineManager.createPipeline(type, factor);
+    TestUtils.openAllRatisPipelines(pipelineManager);
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner, new ExcludeList());
     Assert.assertNotNull(block);
@@ -153,6 +159,7 @@ public class TestBlockManager {
       }
     } catch (IOException e) {
     }
+    TestUtils.openAllRatisPipelines(pipelineManager);
     ExcludeList excludeList = new ExcludeList();
     excludeList
         .addPipeline(pipelineManager.getPipelines(type, factor).get(0).getId());
@@ -245,7 +252,7 @@ public class TestBlockManager {
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
-    Assert.assertNotNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
+    Assert.assertNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner, new ExcludeList()));
   }
 
@@ -258,6 +265,7 @@ public class TestBlockManager {
 
     pipelineManager.createPipeline(type, factor);
     pipelineManager.createPipeline(type, factor);
+    TestUtils.openAllRatisPipelines(pipelineManager);
 
     AllocatedBlock allocatedBlock = blockManager
         .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
@@ -304,6 +312,7 @@ public class TestBlockManager {
              .getNumber(); i++) {
       pipelineManager.createPipeline(type, factor);
     }
+    TestUtils.openAllRatisPipelines(pipelineManager);
 
     // wait till each pipeline has the configured number of containers.
     // After this each pipeline has numContainerPerOwnerInPipeline containers
@@ -355,10 +364,9 @@ public class TestBlockManager {
       pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
     Assert.assertEquals(0, pipelineManager.getPipelines(type, factor).size());
-    Assert.assertNotNull(blockManager
+    Assert.assertNull(blockManager
         .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
             new ExcludeList()));
-    Assert.assertEquals(1, pipelineManager.getPipelines(type, factor).size());
   }
 
 }
