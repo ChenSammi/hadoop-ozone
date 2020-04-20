@@ -20,6 +20,9 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -171,12 +174,7 @@ public class OzoneFileStatus extends FileStatus {
     group = proto.getGroup();
     int flags = proto.getFlags();
     FileStatus fileStatus = new FileStatus(length, isdir, blockReplication,
-        blocksize, mtime, atime, permission, owner, group, symlink, path,
-        FileStatus.attributes(
-            (flags & FileStatusProto.Flags.HAS_ACL_VALUE) != 0,
-            (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
-            (flags & FileStatusProto.Flags.HAS_EC_VALUE) != 0,
-            (flags & FileStatusProto.Flags.SNAPSHOT_ENABLED_VALUE) != 0));
+        blocksize, mtime, atime, permission, owner, group, symlink, path);
     return fileStatus;
   }
 
@@ -200,11 +198,6 @@ public class OzoneFileStatus extends FileStatus {
         .setGroup(stat.getGroup())
         .setPermission(convertPermission(stat.getPermission()));
     int flags = 0;
-    flags |= stat.hasAcl() ? FileStatusProto.Flags.HAS_ACL_VALUE : 0;
-    flags |= stat.isEncrypted() ? FileStatusProto.Flags.HAS_CRYPT_VALUE : 0;
-    flags |= stat.isErasureCoded() ? FileStatusProto.Flags.HAS_EC_VALUE : 0;
-    flags |= stat.isSnapshotEnabled() ? FileStatusProto.Flags
-        .SNAPSHOT_ENABLED_VALUE : 0;
     bld.setFlags(flags);
     return bld.build();
   }
@@ -220,5 +213,30 @@ public class OzoneFileStatus extends FileStatus {
   public static FsPermission convertPermission(FSProtos.FsPermissionProto proto)
       throws IOException {
     return new FsPermission((short) proto.getPerm());
+  }
+
+  public static Set<AttrFlags> attributes(boolean acl, boolean crypt, boolean ec, boolean sn) {
+    if (!acl && !crypt && !ec && !sn) {
+      return Collections.emptySet();
+    } else {
+      EnumSet<AttrFlags> ret = EnumSet.noneOf(FileStatus.AttrFlags.class);
+      if (acl) {
+        ret.add(FileStatus.AttrFlags.HAS_ACL);
+      }
+
+      if (crypt) {
+        ret.add(FileStatus.AttrFlags.HAS_CRYPT);
+      }
+
+      if (ec) {
+        ret.add(FileStatus.AttrFlags.HAS_EC);
+      }
+
+      if (sn) {
+        ret.add(FileStatus.AttrFlags.SNAPSHOT_ENABLED);
+      }
+
+      return ret;
+    }
   }
 }

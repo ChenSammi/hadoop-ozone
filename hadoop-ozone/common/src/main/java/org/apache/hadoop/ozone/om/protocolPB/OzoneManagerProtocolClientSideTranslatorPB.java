@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -37,6 +39,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMLeaderNotReadyException;
 import org.apache.hadoop.ozone.om.exceptions.OMNotLeaderException;
@@ -184,8 +187,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
   private final OzoneManagerProtocolPB rpcProxy;
   private final String clientID;
-  private static final Logger FAILOVER_PROXY_PROVIDER_LOG =
-      LoggerFactory.getLogger(OMFailoverProxyProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OzoneManagerProtocolClientSideTranslatorPB.class);
 
   public OzoneManagerProtocolClientSideTranslatorPB(
       OzoneManagerProtocolPB proxy, String clientId) {
@@ -203,8 +206,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   public OzoneManagerProtocolClientSideTranslatorPB(OzoneConfiguration conf,
       String clientId, String omServiceId, UserGroupInformation ugi)
       throws IOException {
-    InetSocketAddress socket =
-        NetUtils.createSocketAddr("127.0.0.1", 9862);
+    InetSocketAddress socket = NetUtils.createSocketAddr(
+        conf.get(OMConfigKeys.OZONE_OM_ADDRESS_KEY),
+        OMConfigKeys.OZONE_OM_PORT_DEFAULT);
 
     long version = RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
@@ -212,8 +216,21 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     this.rpcProxy = RPC.getProtocolProxy(OzoneManagerProtocolPB.class, version,
         socket, UserGroupInformation.getCurrentUser(),
         conf, NetUtils.getDefaultSocketFactory(conf),
-        RPC.getRpcTimeout(conf), null).getProxy();
+        getRpcTimeout(conf), null).getProxy();
     clientID = clientId;
+  }
+
+  /**
+   * The time after which a RPC will timeout.
+   *
+   * @param conf Configuration
+   * @return the timeout period in milliseconds.
+   */
+  public static final int getRpcTimeout(Configuration conf) {
+    int timeout =
+        conf.getInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY,
+            CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_DEFAULT);
+    return (timeout < 0) ? 0 : timeout;
   }
 
   /**

@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -220,7 +221,8 @@ public interface RatisHelper {
 
     // As for client we do not require server and grpc server/tls. exclude them.
     Map<String, String> ratisClientConf =
-        ozoneConf.getPropsWithPrefix(HDDS_DATANODE_RATIS_PREFIX_KEY);
+        OzoneConfiguration.getPropsWithPrefix((OzoneConfiguration)ozoneConf,
+            HDDS_DATANODE_RATIS_PREFIX_KEY);
     ratisClientConf.forEach((key, val) -> {
       if (!(key.startsWith(RAFT_SERVER_PREFIX_KEY) ||
           key.startsWith(GrpcConfigKeys.TLS.PREFIX) ||
@@ -254,7 +256,9 @@ public interface RatisHelper {
 
   static Map<String, String> getDatanodeRatisPrefixProps(
       Configuration configuration) {
-    return configuration.getPropsWithPrefix(HDDS_DATANODE_RATIS_PREFIX_KEY);
+    return OzoneConfiguration.getPropsWithPrefix(
+        (OzoneConfiguration)configuration,
+        HDDS_DATANODE_RATIS_PREFIX_KEY);
   }
 
   // For External gRPC client to server with gRPC TLS.
@@ -268,10 +272,6 @@ public interface RatisHelper {
     }
     return tlsConfig;
   }
-
-
-
-
 
   static RetryPolicy createRetryPolicy(Configuration conf) {
     int maxRetryCount =

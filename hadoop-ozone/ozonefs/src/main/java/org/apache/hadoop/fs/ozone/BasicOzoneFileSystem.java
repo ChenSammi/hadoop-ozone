@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -461,7 +462,9 @@ public class BasicOzoneFileSystem extends FileSystem {
   public boolean delete(Path f, boolean recursive) throws IOException {
     incrementCounter(Statistic.INVOCATION_DELETE);
     statistics.incrementWriteOps(1);
-    LOG.debug("Delete path {} - recursive {}", f, recursive);
+    LOG.info("Delete path {} - recursive {}", f, recursive);
+    StackTraceElement[] st = Thread.currentThread().getStackTrace();
+    Arrays.stream(st).forEach(s -> LOG.info(s.toString()));
     FileStatus status;
     try {
       status = getFileStatus(f);
@@ -474,11 +477,11 @@ public class BasicOzoneFileSystem extends FileSystem {
     boolean result;
 
     if (status.isDirectory()) {
-      LOG.debug("delete: Path is a directory: {}", f);
+      LOG.info("delete: Path is a directory: {}", f);
 
       result = innerDelete(f, recursive);
     } else {
-      LOG.debug("delete: Path is a file: {}", f);
+      LOG.info("delete: Path is a file: {}", f);
       result = adapter.deleteObject(key);
     }
 

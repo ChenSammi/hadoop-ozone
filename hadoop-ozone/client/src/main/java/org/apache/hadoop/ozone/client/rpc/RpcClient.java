@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client.rpc;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.security.InvalidKeyException;
@@ -452,7 +453,7 @@ public class RpcClient implements ClientProtocol {
    * @return listOfAcls
    * */
   private List<OzoneAcl> getAclList() {
-    return OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
+    return OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroupNames(),
         userRights, groupRights);
   }
 
@@ -836,8 +837,8 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public void close() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
-    IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
+    cleanupWithLogger(LOG, ozoneManagerClient);
+    cleanupWithLogger(LOG, xceiverClientManager);
   }
 
   @Override
@@ -1258,5 +1259,23 @@ public class RpcClient implements ClientProtocol {
   @Override
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
+  }
+
+  private void cleanupWithLogger(Logger logger, Closeable... closeables) {
+    Closeable[] var2 = closeables;
+    int var3 = closeables.length;
+
+    for(int var4 = 0; var4 < var3; ++var4) {
+      Closeable c = var2[var4];
+      if (c != null) {
+        try {
+          c.close();
+        } catch (Throwable var7) {
+          if (logger != null) {
+            logger.debug("Exception in closing {}", c, var7);
+          }
+        }
+      }
+    }
   }
 }
