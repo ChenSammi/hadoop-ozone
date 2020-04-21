@@ -48,6 +48,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.SocketFactory;
+
 /**
  * A failover proxy provider implementation which allows clients to configure
  * multiple OMs to connect to. In case of OM failover, client can try
@@ -55,6 +57,29 @@ import org.slf4j.LoggerFactory;
  */
 public class OMFailoverProxyProvider implements
     FailoverProxyProvider<OzoneManagerProtocolPB>, Closeable {
+
+  public static class ProxyInfoEx<T> {
+    public T proxy;
+    public String proxyInfo;
+
+    public ProxyInfoEx(T proxy, String proxyInfo) {
+      this.proxy = proxy;
+      this.proxyInfo = proxyInfo;
+    }
+
+    private String proxyName() {
+      return this.proxy != null ? this.proxy.getClass().getSimpleName() :
+          "UnknownProxy";
+    }
+
+    public String getString(String methodName) {
+      return this.proxyName() + "." + methodName + " over " + this.proxyInfo;
+    }
+
+    public String toString() {
+      return this.proxyName() + " over " + this.proxyInfo;
+    }
+  }
 
   public static final Logger LOG =
       LoggerFactory.getLogger(OMFailoverProxyProvider.class);
@@ -116,16 +141,12 @@ public class OMFailoverProxyProvider implements
             rpcAddrStr);
 
         if (omProxyInfo.getAddress() != null) {
-
-          ProxyInfo<OzoneManagerProtocolPB> proxyInfo =
-              new ProxyInfo(null, omProxyInfo.toString());
-
           // For a non-HA OM setup, nodeId might be null. If so, we assign it
           // a dummy value
           if (nodeId == null) {
             nodeId = OzoneConsts.OM_NODE_ID_DUMMY;
           }
-          omProxies.put(nodeId, proxyInfo);
+          omProxies.put(nodeId, null);
           omProxyInfos.put(nodeId, omProxyInfo);
           omNodeIDList.add(nodeId);
         } else {
@@ -145,14 +166,6 @@ public class OMFailoverProxyProvider implements
   @VisibleForTesting
   public synchronized String getCurrentProxyOMNodeId() {
     return currentProxyOMNodeId;
-  }
-
-  private OzoneManagerProtocolPB createOMProxy(InetSocketAddress omAddress)
-      throws IOException {
-    RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
-    return RPC.getProxy(OzoneManagerProtocolPB.class, omVersion, omAddress, ugi,
-        conf, NetUtils.getDefaultSocketFactory(conf), getRpcTimeout(conf));
   }
 
   /**
@@ -175,27 +188,46 @@ public class OMFailoverProxyProvider implements
    */
   @Override
   public synchronized ProxyInfo getProxy() {
-    ProxyInfo currentProxyInfo = omProxies.get(currentProxyOMNodeId);
-    createOMProxyIfNeeded(currentProxyInfo, currentProxyOMNodeId);
-    return currentProxyInfo;
+    return createOMProxyIfNeeded(currentProxyOMNodeId);
   }
 
   /**
    * Creates proxy object if it does not already exist.
    */
-  private void createOMProxyIfNeeded(ProxyInfo proxyInfo,
-      String nodeId) {
-    if (proxyInfo.proxy == null) {
-      InetSocketAddress address = omProxyInfos.get(nodeId).getAddress();
-      try {
+  private ProxyInfo createOMProxyIfNeeded(String nodeId) {
+    ProxyInfo proxyInfo = omProxies.get(nodeId);
 
-        proxyInfo.proxy = createOMProxy(address);
+    if (proxyInfo == null) {
+      InetSocketAddress omAddress = omProxyInfos.get(nodeId).getAddress();
+      try {
+        RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
+            ProtobufRpcEngine.class);
+        LOG.info("RPC.getProxy");
+        SocketFactory sf = NetUtils.getDefaultSocketFactory(conf);
+        LOG.info("NetUtils.getDefaultSocketFactory");
+        proxyInfo = new ProxyInfo<OzoneManagerProtocolPB>(
+            RPC.getProxy(OzoneManagerProtocolPB.class,
+                omVersion, omAddress, ugi, conf, sf, getRpcTimeout(conf)),
+            omProxyInfos.get(nodeId).toString());
+        omProxies.put(nodeId, proxyInfo);
       } catch (IOException ioe) {
         LOG.error("{} Failed to create RPC proxy to OM at {}",
-            this.getClass().getSimpleName(), address, ioe);
-        throw new RuntimeException(ioe);
+            this.getClass().getSimpleName(), omAddress, ioe);
+        throw new RuntimeException(ioe.getLocalizedMessage() +
+            (ioe.getCause() == null ? "Hello" : ioe.getCause().getMessage()));
+      } catch (Throwable e) {
+        LOG.error("{} Failed to create RPC proxy to OM at {}",
+            this.getClass().getSimpleName(), omAddress, e);
+        if (e.getCause() != null) {
+          LOG.error("Cause = ", e.getCause().getClass().getCanonicalName() + "," +
+              e.getCause().getLocalizedMessage());
+        }
+        throw new RuntimeException(e.getLocalizedMessage() +
+            (e.getCause() == null ? "World" : e.getCause().getMessage()));
       }
     }
+
+    return proxyInfo;
   }
 
   public Text getCurrentProxyDelegationToken() {
