@@ -179,9 +179,7 @@ public class OMFailoverProxyProvider implements
       try {
         RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
             ProtobufRpcEngine.class);
-        LOG.info("RPC.getProxy");
         SocketFactory sf = NetUtils.getDefaultSocketFactory(conf);
-        LOG.info("NetUtils.getDefaultSocketFactory");
         proxyInfo = new ProxyInfo<OzoneManagerProtocolPB>(
             RPC.getProxy(OzoneManagerProtocolPB.class,
                 omVersion, omAddress, ugi, conf, sf, getRpcTimeout(conf)),

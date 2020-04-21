@@ -35,7 +35,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -175,9 +174,9 @@ public class RpcClient implements ClientProtocol {
         OzoneConfiguration.of(conf).getObject(XceiverClientManager.
             ScmClientConfig.class), caCertPem);
 
-    int configuredChunkSize = (int) conf
-        .getStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
-            ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES);
+    int configuredChunkSize = Integer.parseInt(conf.get(
+        ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
+        ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT));
     if(configuredChunkSize > OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
               + " the maximum size ({}),"
@@ -187,25 +186,21 @@ public class RpcClient implements ClientProtocol {
     } else {
       chunkSize = configuredChunkSize;
     }
-    streamBufferSize = (int) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    streamBufferFlushSize = (long) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    streamBufferMaxSize = (long) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    blockSize = (long) conf.getStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE,
-        OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
+    streamBufferSize = Integer.parseInt(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE_DEFAULT));
+    streamBufferFlushSize = Long.parseLong(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT));
+    streamBufferMaxSize = Long.parseLong(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT));
+    blockSize = Long.parseLong(conf.get(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE,
+        OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT));
 
-    int configuredChecksumSize = (int) conf.getStorageSize(
+    int configuredChecksumSize = Integer.parseInt(conf.get(
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM,
-        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT,
-        StorageUnit.BYTES);
+        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT));
     if(configuredChecksumSize <
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE) {
       LOG.warn("The checksum size ({}) is not allowed to be less than the " +
