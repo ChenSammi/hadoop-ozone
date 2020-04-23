@@ -174,7 +174,7 @@ public class TestOzoneNativeAuthorizer {
         .setFactor(HddsProtos.ReplicationFactor.ONE)
         .setDataSize(0)
         .setType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setAcls(OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
+        .setAcls(OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroupNames(),
             ALL, ALL))
         .build();
 

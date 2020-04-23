@@ -388,13 +388,13 @@
   </property>
   <property>
     <name>ozone.client.stream.buffer.size</name>
-    <value>4MB</value>
+    <value>4194304</value>
     <tag>OZONE, CLIENT</tag>
     <description>The size of chunks the client will send to the server.</description>
   </property>
   <property>
     <name>ozone.client.stream.buffer.flush.size</name>
-    <value>16MB</value>
+    <value>16777216</value>
     <tag>OZONE, CLIENT</tag>
     <description>Size which determines at what buffer position a partial
       flush will be initiated during write. It should be a multiple
@@ -403,7 +403,7 @@
   </property>
   <property>
     <name>ozone.client.stream.buffer.max.size</name>
-    <value>32MB</value>
+    <value>33554432</value>
     <tag>OZONE, CLIENT</tag>
     <description>Size which determines at what buffer position
       write call be blocked till acknowledgement of the first partial flush
@@ -699,7 +699,7 @@
   </property>
   <property>
     <name>ozone.scm.block.size</name>
-    <value>256MB</value>
+    <value>268435456</value>
     <tag>OZONE, SCM</tag>
     <description>
       The default size of a scm block. This is maps to the default
@@ -708,7 +708,7 @@
   </property>
   <property>
     <name>ozone.scm.chunk.size</name>
-    <value>4MB</value>
+    <value>4194304</value>
     <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
     <description>
       The chunk size for reading/writing chunk operations in bytes.
@@ -1525,7 +1525,7 @@
 
   <property>
     <name>ozone.client.bytes.per.checksum</name>
-    <value>1MB</value>
+    <value>1048576</value>
     <tag>OZONE, CLIENT, MANAGEMENT</tag>
     <description>Checksum will be computed for every bytes per checksum number
       of bytes and stored sequentially. The minimum value for this config is

@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.client.rpc;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -94,6 +92,7 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.security.InvalidKeyException;
@@ -165,9 +164,9 @@ public class RpcClient implements ClientProtocol {
         OzoneConfiguration.of(conf).getObject(XceiverClientManager.
             ScmClientConfig.class), caCertPem);
 
-    int configuredChunkSize = (int) conf
-        .getStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
-            ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES);
+    int configuredChunkSize = Integer.parseInt(conf.get(
+        ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
+        ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT));
     if(configuredChunkSize > OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
               + " the maximum size ({}),"
@@ -177,25 +176,21 @@ public class RpcClient implements ClientProtocol {
     } else {
       chunkSize = configuredChunkSize;
     }
-    streamBufferSize = (int) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    streamBufferFlushSize = (long) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    streamBufferMaxSize = (long) conf
-        .getStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
-            OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT,
-            StorageUnit.BYTES);
-    blockSize = (long) conf.getStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE,
-        OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
+    streamBufferSize = Integer.parseInt(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_SIZE_DEFAULT));
+    streamBufferFlushSize = Long.parseLong(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT));
+    streamBufferMaxSize = Long.parseLong(conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT));
+    blockSize = Long.parseLong(conf.get(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE,
+        OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT));
 
-    int configuredChecksumSize = (int) conf.getStorageSize(
+    int configuredChecksumSize = Integer.parseInt(conf.get(
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM,
-        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT,
-        StorageUnit.BYTES);
+        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT));
     if(configuredChecksumSize <
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE) {
       LOG.warn("The checksum size ({}) is not allowed to be less than the " +
@@ -441,7 +436,7 @@ public class RpcClient implements ClientProtocol {
    * @return listOfAcls
    * */
   private List<OzoneAcl> getAclList() {
-    return OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
+    return OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroupNames(),
         userRights, groupRights);
   }
 
@@ -820,8 +815,8 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public void close() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
-    IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
+    cleanupWithLogger(LOG, ozoneManagerClient);
+    cleanupWithLogger(LOG, xceiverClientManager);
   }
 
   @Override
@@ -1242,5 +1237,23 @@ public class RpcClient implements ClientProtocol {
   @Override
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
+  }
+
+  private void cleanupWithLogger(Logger logger, Closeable... closeables) {
+    Closeable[] var2 = closeables;
+    int var3 = closeables.length;
+
+    for(int var4 = 0; var4 < var3; ++var4) {
+      Closeable c = var2[var4];
+      if (c != null) {
+        try {
+          c.close();
+        } catch (Throwable var7) {
+          if (logger != null) {
+            logger.debug("Exception in closing {}", c, var7);
+          }
+        }
+      }
+    }
   }
 }

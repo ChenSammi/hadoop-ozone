@@ -392,4 +392,22 @@ public class OzoneConfiguration extends Configuration {
     }
     return configMap;
   }
+
+  public Properties getPropsEx() {
+    return this.getProps();
+  }
+
+  public static Map<String, String> getPropsWithPrefix(OzoneConfiguration conf,
+      String confPrefix) {
+    Properties props = conf.getPropsEx();
+    Map<String, String> configMap = new HashMap<>();
+    for (String name : props.stringPropertyNames()) {
+      if (name.startsWith(confPrefix)) {
+        String value = conf.get(name);
+        String keyName = name.substring(confPrefix.length());
+        configMap.put(keyName, value);
+      }
+    }
+    return configMap;
+  }
 }

@@ -177,10 +177,6 @@
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdds-server-framework</artifactId>
         </exclusion>
         <exclusion>

@@ -33,5 +33,4 @@ public final class OzoneClientUtils {
     return RetryPolicies.retryUpToMaximumCountWithFixedSleep(
         maxRetryCount, retryInterval, TimeUnit.MILLISECONDS);
   }
-
 }

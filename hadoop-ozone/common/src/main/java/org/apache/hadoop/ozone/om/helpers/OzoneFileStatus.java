@@ -121,7 +121,7 @@ public class OzoneFileStatus extends FileStatus {
     return super.hashCode();
   }
 
-  private static FileStatus convert(FileStatusProto proto) throws IOException {
+  public static FileStatus convert(FileStatusProto proto) throws IOException {
     final Path path;
     final long length;
     final boolean isdir;
@@ -169,14 +169,8 @@ public class OzoneFileStatus extends FileStatus {
     permission = convertPermission(proto.getPermission());
     owner = proto.getOwner();
     group = proto.getGroup();
-    int flags = proto.getFlags();
     FileStatus fileStatus = new FileStatus(length, isdir, blockReplication,
-        blocksize, mtime, atime, permission, owner, group, symlink, path,
-        FileStatus.attributes(
-            (flags & FileStatusProto.Flags.HAS_ACL_VALUE) != 0,
-            (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
-            (flags & FileStatusProto.Flags.HAS_EC_VALUE) != 0,
-            (flags & FileStatusProto.Flags.SNAPSHOT_ENABLED_VALUE) != 0));
+        blocksize, mtime, atime, permission, owner, group, symlink, path);
     return fileStatus;
   }
 
@@ -200,11 +194,6 @@ public class OzoneFileStatus extends FileStatus {
         .setGroup(stat.getGroup())
         .setPermission(convertPermission(stat.getPermission()));
     int flags = 0;
-    flags |= stat.hasAcl() ? FileStatusProto.Flags.HAS_ACL_VALUE : 0;
-    flags |= stat.isEncrypted() ? FileStatusProto.Flags.HAS_CRYPT_VALUE : 0;
-    flags |= stat.isErasureCoded() ? FileStatusProto.Flags.HAS_EC_VALUE : 0;
-    flags |= stat.isSnapshotEnabled() ? FileStatusProto.Flags
-        .SNAPSHOT_ENABLED_VALUE : 0;
     bld.setFlags(flags);
     return bld.build();
   }

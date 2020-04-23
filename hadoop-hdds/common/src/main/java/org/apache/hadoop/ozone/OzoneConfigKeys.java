@@ -107,7 +107,7 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_SCM_BLOCK_SIZE =
       "ozone.scm.block.size";
-  public static final String OZONE_SCM_BLOCK_SIZE_DEFAULT = "256MB";
+  public static final String OZONE_SCM_BLOCK_SIZE_DEFAULT = "268435456";
 
   /**
    * Ozone administrator users delimited by comma.
@@ -126,20 +126,22 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_STREAM_BUFFER_SIZE =
       "ozone.client.stream.buffer.size";
 
+  // 4MB
   public static final String OZONE_CLIENT_STREAM_BUFFER_SIZE_DEFAULT =
-      "4MB";
+      "4194304";
 
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
       "ozone.client.stream.buffer.flush.size";
 
+  //16MB
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT =
-      "16MB";
+      "16777216";
 
   public static final String OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE =
       "ozone.client.stream.buffer.max.size";
 
   public static final String OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT =
-      "32MB";
+      "33554432";
 
   public static final String OZONE_CLIENT_MAX_RETRIES =
       "ozone.client.max.retries";
@@ -362,7 +364,8 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "CRC32";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM =
       "ozone.client.bytes.per.checksum";
-  public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT = "1MB";
+  public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT =
+      "1048576";
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES =
       1024 * 1024;
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE = 256 * 1024;

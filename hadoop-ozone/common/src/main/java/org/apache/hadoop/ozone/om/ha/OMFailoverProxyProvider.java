@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.ha;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
@@ -49,6 +50,8 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+
+import javax.net.SocketFactory;
 
 /**
  * A failover proxy provider implementation which allows clients to configure
@@ -132,16 +135,12 @@ public class OMFailoverProxyProvider implements
             rpcAddrStr);
 
         if (omProxyInfo.getAddress() != null) {
-
-          ProxyInfo<OzoneManagerProtocolPB> proxyInfo =
-              new ProxyInfo(null, omProxyInfo.toString());
-
           // For a non-HA OM setup, nodeId might be null. If so, we assign it
           // a dummy value
           if (nodeId == null) {
             nodeId = OzoneConsts.OM_NODE_ID_DUMMY;
           }
-          omProxies.put(nodeId, proxyInfo);
+          omProxies.put(nodeId, null);
           omProxyInfos.put(nodeId, omProxyInfo);
           omNodeIDList.add(nodeId);
         } else {
@@ -179,26 +178,46 @@ public class OMFailoverProxyProvider implements
    */
   @Override
   public synchronized ProxyInfo getProxy() {
-    ProxyInfo currentProxyInfo = omProxies.get(currentProxyOMNodeId);
-    createOMProxyIfNeeded(currentProxyInfo, currentProxyOMNodeId);
-    return currentProxyInfo;
+    return createOMProxyIfNeeded(currentProxyOMNodeId);
   }
 
   /**
    * Creates proxy object if it does not already exist.
    */
-  private void createOMProxyIfNeeded(ProxyInfo proxyInfo,
-      String nodeId) {
-    if (proxyInfo.proxy == null) {
-      InetSocketAddress address = omProxyInfos.get(nodeId).getAddress();
+  private ProxyInfo createOMProxyIfNeeded(String nodeId) {
+    ProxyInfo proxyInfo = omProxies.get(nodeId);
+    if (proxyInfo == null) {
+      InetSocketAddress omAddress = omProxyInfos.get(nodeId).getAddress();
       try {
-        proxyInfo.proxy = createOMProxy(address);
-      } catch (IOException ioe) {
+        RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
+            ProtobufRpcEngine.class);
+        SocketFactory sf = NetUtils.getDefaultSocketFactory(conf);
+        proxyInfo = new ProxyInfo<OzoneManagerProtocolPB>(
+            RPC.getProxy(OzoneManagerProtocolPB.class,
+                omVersion, omAddress, ugi, conf, sf, getRpcTimeout(conf)),
+            omProxyInfos.get(nodeId).toString());
+        omProxies.put(nodeId, proxyInfo);
+      } catch (Throwable ioe) {
         LOG.error("{} Failed to create RPC proxy to OM at {}",
-            this.getClass().getSimpleName(), address, ioe);
+            this.getClass().getSimpleName(), omAddress, ioe);
         throw new RuntimeException(ioe);
       }
     }
+
+    return proxyInfo;
+  }
+
+  /**
+   * The time after which a RPC will timeout.
+   *
+   * @param conf Configuration
+   * @return the timeout period in milliseconds.
+   */
+  public static final int getRpcTimeout(Configuration conf) {
+    int timeout =
+        conf.getInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY,
+            CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_DEFAULT);
+    return (timeout < 0) ? 0 : timeout;
   }
 
   public Text getCurrentProxyDelegationToken() {

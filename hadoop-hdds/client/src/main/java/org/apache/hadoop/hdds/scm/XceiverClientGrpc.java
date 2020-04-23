@@ -420,7 +420,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();
     semaphore.acquire();
-    long requestTime = Time.monotonicNowNanos();
+    long requestTime = System.nanoTime();
     metrics.incrPendingContainerOpsMetrics(request.getCmdType());
     // create a new grpc stream for each non-async call.
 
@@ -433,7 +433,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
                 replyFuture.complete(value);
                 metrics.decrPendingContainerOpsMetrics(request.getCmdType());
                 metrics.addContainerOpsLatency(request.getCmdType(),
-                    Time.monotonicNowNanos() - requestTime);
+                    System.nanoTime() - requestTime);
                 semaphore.release();
               }
 
@@ -442,7 +442,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
                 replyFuture.completeExceptionally(t);
                 metrics.decrPendingContainerOpsMetrics(request.getCmdType());
                 metrics.addContainerOpsLatency(request.getCmdType(),
-                    Time.monotonicNowNanos() - requestTime);
+                    System.nanoTime() - requestTime);
                 semaphore.release();
               }
 
