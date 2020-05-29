@@ -1115,14 +1115,10 @@ public class TestKeyManagerImpl {
   @Test
   public void testListStatusWithIntermediateDir() throws IOException {
     String keyName = "object-dir/object-name";
-    String volume = "hadoop";
-    String bucket = "ozone";
-    createVolume(volume);
-    createBucket(volume, bucket);
     OmKeyArgs keyArgs =
         new OmKeyArgs.Builder()
-            .setVolumeName(volume)
-            .setBucketName(bucket)
+            .setVolumeName(VOLUME_NAME)
+            .setBucketName(BUCKET_NAME)
             .setKeyName(keyName)
             .setAcls(Collections.emptyList())
             .setLocationInfoList(new ArrayList<>())
