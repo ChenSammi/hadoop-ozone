@@ -1113,29 +1113,6 @@ public class TestKeyManagerImpl {
   }
 
   @Test
-  public void testListStatusWithIntermediateDir() throws IOException {
-    String keyName = "object-dir/object-name";
-    OmKeyArgs keyArgs =
-        new OmKeyArgs.Builder()
-            .setVolumeName(VOLUME_NAME)
-            .setBucketName(BUCKET_NAME)
-            .setKeyName(keyName)
-            .setAcls(Collections.emptyList())
-            .setLocationInfoList(new ArrayList<>())
-            .build();
-
-    // create a key
-    OpenKeySession keySession = keyManager.openKey(keyArgs);
-    keyManager.commitKey(keyArgs, keySession.getId());
-
-    OmKeyArgs rootDirArgs = createKeyArgs("");
-    List<OzoneFileStatus> fileStatuses =
-        keyManager.listStatus(rootDirArgs, true, "", 100);
-    // the number of immediate children of root is 1
-    Assert.assertEquals(1, fileStatuses.size());
-  }
-
-  @Test
   public void testRefreshPipeline() throws Exception {
 
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf).build();
