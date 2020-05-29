@@ -1115,13 +1115,21 @@ public class TestKeyManagerImpl {
   @Test
   public void testListStatusWithIntermediateDir() throws IOException {
     String keyName = "object-dir/object-name";
-    OmKeyArgs keyArgs = createBuilder()
-        .setKeyName(keyName)
-        .setSortDatanodesInPipeline(true)
-        .build();
+    String volume = "hadoop";
+    String bucket = "ozone";
+    createVolume(volume);
+    createBucket(volume, bucket);
+    OmKeyArgs keyArgs =
+        new OmKeyArgs.Builder()
+            .setVolumeName(volume)
+            .setBucketName(bucket)
+            .setKeyName(keyName)
+            .setAcls(Collections.emptyList())
+            .setLocationInfoList(new ArrayList<>())
+            .build();
 
     // create a key
-    OpenKeySession keySession = keyManager.createFile(keyArgs, false, false);
+    OpenKeySession keySession = keyManager.openKey(keyArgs);
     keyManager.commitKey(keyArgs, keySession.getId());
 
     OmKeyArgs rootDirArgs = createKeyArgs("");
